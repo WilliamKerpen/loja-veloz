@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loja Veloz</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script type="module" src="js/api.js" defer></script>
+    <script type="module" src="js/main.js" defer></script>
+</head>
+<body>
+
+    <!-- HEADER FIXO -->
+    <header class="header">
+        <div class="header-content">
+
+            <div class="logo">Loja Veloz</div>
+
+            <div class="search-box">
+                <input id="searchInput" type="text" placeholder="Buscar produtos...">
+                <button id="btnSearch">Buscar</button>
+            </div>
+
+            <div class="header-right">
+                <span class="user-greeting">Olá, visitante</span>
+
+                <div class="cart">
+                    🛒 <span id="cartCount">0</span>
+                </div>
+            </div>
+
+        </div>
+    </header>
+
+
+    <!-- CATEGORIAS -->
+    <section class="categories">
+        <h2>Categorias</h2>
+        <div id="categoryList" class="category-list"></div>
+    </section>
+
+    <!-- PRODUTOS -->
+    <section class="products">
+        <h2>Produtos</h2>
+        <div id="productList" class="product-list"></div>
+    </section>
+
+</body>
+</html>
