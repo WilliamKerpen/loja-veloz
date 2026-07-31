@@ -4,7 +4,6 @@ import helmet from "helmet";
 import path from "path";
 import { fileURLToPath } from "url";
 
-
 import productRoutes from "./modules/products/product.routes.js";
 import categoryRoutes from "./modules/categories/category.routes.js";
 import userRoutes from "./modules/users/user.routes.js";
@@ -25,7 +24,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 app.use(express.json());
-
 
 app.use(cors({
     origin: [
@@ -53,10 +51,14 @@ app.use("/support", supportRoutes);
 app.use("/health", healthRoutes);
 
 // Servir imagens
-// Servir arquivos estáticos
-// Serve static files
 app.use("/img", express.static(path.join(__dirname, "../public/img")));
 
-app.listen(3000, () => {
-  console.log("API rodando na porta 3000");
-});
+// EXPORTA O APP PARA TESTES
+export default app;
+
+// INICIA O SERVIDOR APENAS QUANDO NÃO ESTIVER EM TESTE
+if (process.env.NODE_ENV !== "test") {
+  app.listen(3000, () => {
+    console.log("API rodando na porta 3000");
+  });
+}
