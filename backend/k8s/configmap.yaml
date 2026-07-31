@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loja-veloz-config
+  namespace: loja-veloz
+data:
+  SMTP_HOST: "smtp.gmail.com"
+  SMTP_PORT: "465"
+  EMAIL_FROM: "Loja Veloz <seu_email@gmail.com>"
+  EMAIL_ADMIN: "admin@loja.com"

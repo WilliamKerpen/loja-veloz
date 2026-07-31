@@ -17,7 +17,7 @@ import logRoutes from "./modules/logs/log.routes.js";
 import reportRoutes from "./modules/reports/report.routes.js";
 import returnRoutes from "./modules/returns/return.routes.js";
 import supportRoutes from "./modules/support/support.routes.js";
-
+import healthRoutes from "./modules/health/health.routers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,12 +50,12 @@ app.use("/logs", logRoutes);
 app.use("/reports", reportRoutes);
 app.use("/returns", returnRoutes);
 app.use("/support", supportRoutes);
+app.use("/health", healthRoutes);
 
 // Servir imagens
 // Servir arquivos estáticos
 // Serve static files
 app.use("/img", express.static(path.join(__dirname, "../public/img")));
-
 
 app.listen(3000, () => {
   console.log("API rodando na porta 3000");

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: loja-veloz
+  labels:
+    project: loja-veloz
+    environment: development

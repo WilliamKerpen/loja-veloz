@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loja-veloz-api
+  namespace: loja-veloz
+  labels:
+    app: loja-veloz-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: loja-veloz-api
+  template:
+    metadata:
+      labels:
+        app: loja-veloz-api
+    spec:
+      containers:
+        - name: api
+          image: backend-api:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 3000
+
+          env:
+            # DATABASE_URL completo (ORM)
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: loja-veloz-secret
+                  key: DATABASE_URL
+
+            # Variáveis do PostgreSQL (driver pg)
+            - name: POSTGRES_HOST
+              value: "postgres.loja-veloz.svc.cluster.local"
+
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: loja-veloz-secret
+                  key: POSTGRES_USER
+
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: loja-veloz-secret
+                  key: POSTGRES_PASSWORD
+
+            - name: POSTGRES_DB
+              value: "loja_veloz_db"
+
+            # Stripe
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: loja-veloz-secret
+                  key: STRIPE_SECRET_KEY
+
+            # SMTP (email)
+            - name: SMTP_USER
+              valueFrom:
+                secretKeyRef:
+                  name: loja-veloz-secret
+                  key: SMTP_USER
+
+            - name: SMTP_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: loja-veloz-secret
+                  key: SMTP_PASS
+
+            - name: SMTP_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: loja-veloz-config
+                  key: SMTP_HOST
+
+            - name: SMTP_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: loja-veloz-config
+                  key: SMTP_PORT
+
+            - name: EMAIL_FROM
+              valueFrom:
+                configMapKeyRef:
+                  name: loja-veloz-config
+                  key: EMAIL_FROM
+
+            - name: EMAIL_ADMIN
+              valueFrom:
+                configMapKeyRef:
+                  name: loja-veloz-config
+                  key: EMAIL_ADMIN
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 6
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: loja-veloz-seeds
+  namespace: loja-veloz
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: seeds
+          image: loja-veloz-api:latest
+          imagePullPolicy: Never
+          envFrom:
+            - secretRef:
+                name: loja-veloz-secret
+          command: ["npm", "run", "seed"]
