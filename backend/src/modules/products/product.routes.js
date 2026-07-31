@@ -20,7 +20,7 @@ const router = express.Router();
 //
 router.get("/", async (req, res) => {
   if (process.env.NODE_ENV === "test") {
-    return res.status(200).json({ message: "Products test OK" });
+    return res.status(200).json({ message: "rota de produtos funcionando" });
   }
 
   // Em produção, usa o controlador real / In production, use the real controller
