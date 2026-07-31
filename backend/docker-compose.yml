@@ -1,9 +1,32 @@
 version: "3.9"
 
 services:
-  db:
-    image: postgres:16
+  api:
+    container_name: loja_veloz_api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+    networks:
+      - loja_veloz_net
+    # Healthcheck — garante que a API está saudável
+    # Healthcheck — ensures API is healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  postgres:
     container_name: loja_veloz_db
+    image: postgres:15-alpine
     restart: always
     env_file:
       - .env
@@ -15,19 +38,23 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - loja_veloz_net
+    # Healthcheck — garante que o banco está aceitando conexões
+    # Healthcheck — ensures DB is accepting connections
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  api:
-    build: .
-    container_name: loja_veloz_api
-    restart: always
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-    ports:
-      - "3000:3000"
-    depends_on:
-      - db
-
+# Volume persistente para o banco
+# Persistent volume for the database
 volumes:
   postgres_data:
+
+# Rede interna entre API e DB
+# Internal network between API and DB
+networks:
+  loja_veloz_net:
+    driver: bridge
