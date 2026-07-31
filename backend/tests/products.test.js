@@ -1,15 +1,14 @@
-//  Teste da rota de produtos usando TAP + Supertest
-// Products route test using TAP + Supertest
+//  Teste da rota de produtos usando Node Test Runner
+//  Products route test using Node Test Runner
 
-import t from "tap";
+import test from "node:test";
+import assert from "node:assert";
 import request from "supertest";
-import app from "../src/app.js";
+import server from "../src/server.js"; 
 
-t.test("GET /products deve retornar status 200 e mensagem", async t => {
-  const res = await request(app).get("/products");
+test("GET /products deve retornar status 200 e mensagem", async () => {
+  const res = await request(server).get("/products");
 
-  t.equal(res.statusCode, 200);
-  t.same(res.body, { message: "rota de produtos funcionando" });
-
-  t.end();
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body, { message: "rota de produtos funcionando" });
 });

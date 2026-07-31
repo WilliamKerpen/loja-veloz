@@ -1,15 +1,14 @@
-//  Teste da rota de health
-// Health route test
+//  Teste da rota de health usando Node Test Runner
+// Health route test using Node Test Runner
 
-import t from "tap";
+import test from "node:test";
+import assert from "node:assert";
 import request from "supertest";
-import app from "../src/app.js";
+import server from "../src/server.js"; // AGORA ESTÁ CORRETO
 
-t.test("GET /health deve retornar status ok", async t => {
-  const res = await request(app).get("/health");
+test("GET /health deve retornar status ok", async () => {
+  const res = await request(server).get("/health");
 
-  t.equal(res.statusCode, 200);
-  t.same(res.body, { status: "ok" });
-
-  t.end();
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body, { status: "ok" });
 });
