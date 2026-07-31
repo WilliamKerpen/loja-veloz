@@ -1,10 +1,15 @@
-import request from "supertest";
-import app from "../src/app.js"; // ajuste o caminho conforme seu projeto
+//  Teste da rota de health
+// Health route test
 
-describe("Health Check", () => {
-  test("API deve responder com status 200", async () => {
-    const res = await request(app).get("/health");
-    expect(res.statusCode).toBe(200);
-    expect(res.body.status).toBe("ok");
-  });
+import t from "tap";
+import request from "supertest";
+import app from "../src/app.js";
+
+t.test("GET /health deve retornar status ok", async t => {
+  const res = await request(app).get("/health");
+
+  t.equal(res.statusCode, 200);
+  t.same(res.body, { status: "ok" });
+
+  t.end();
 });

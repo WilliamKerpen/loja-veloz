@@ -1,18 +1,15 @@
-// Teste da rota de produtos usando Jest + Supertest
-// Products route test using Jest + Supertest
+//  Teste da rota de produtos usando TAP + Supertest
+// Products route test using TAP + Supertest
 
+import t from "tap";
 import request from "supertest";
-import app from "../src/app.js"; // ajuste o caminho se necessário
+import app from "../src/app.js";
 
-describe("GET /products", () => {
+t.test("GET /products deve retornar status 200 e mensagem", async t => {
+  const res = await request(app).get("/products");
 
-  // Verifica se a rota retorna status 200 e a mensagem correta
-  // Checks if the route returns status 200 and the correct message
-  test("deve retornar status 200 e mensagem de funcionamento", async () => {
-    const res = await request(app).get("/products");
+  t.equal(res.statusCode, 200);
+  t.same(res.body, { message: "rota de produtos funcionando" });
 
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toHaveProperty("message", "rota de produtos funcionando");
-  });
-
+  t.end();
 });
