@@ -11,33 +11,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout do repositório
+      # Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Configura Node.js
+      # Set up Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
+      # Instala dependências do backend
+      # Install backend dependencies
       - name: Install dependencies
         run: cd backend && npm install
 
+      # Executa testes
+      # Run tests
       - name: Run tests
         working-directory: backend
         run: npm test
         env:
           NODE_ENV: test
 
+      # Configura Docker Buildx para multi-arch
+      # Set up Docker Buildx (multi-arch)
       - name: Set up Docker Buildx (multi-arch)
-        run: |
-          docker buildx create --use --driver docker-container
+        run: docker buildx create --use --driver docker-container
 
+      # Login no Docker Hub
+      # Login to Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      # Build multi-arch usando SOMENTE a pasta backend
+      # Multi-arch build using ONLY the backend folder
       - name: Build and push multi-arch image
         run: |
           docker buildx build \
@@ -45,13 +58,15 @@ jobs:
             --file backend/Dockerfile \
             -t ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:${{ github.sha }} \
             -t ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:latest \
-            --push .
+            --push backend
 
   deploy:
     needs: build-test-publish
     runs-on: ubuntu-latest
 
     steps:
+      # Deploy via SSH
+      # Deploy via SSH
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:

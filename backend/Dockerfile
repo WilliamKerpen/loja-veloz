@@ -1,56 +1,51 @@
-# ============================
-# STAGE 1 — Build
-# Etapa 1 — Construção
-# ============================
+# ---------------------------------------------------------
+# 1) Build Stage - Instala dependências
+#    Build Stage - Install dependencies
+# ---------------------------------------------------------
 FROM node:20-alpine AS build
 
+# Define o diretório de trabalho
+# Set working directory
 WORKDIR /app
 
-# Copy only the files needed to install dependencies
-# Copia apenas os arquivos necessários para instalar dependências
+# Copia apenas package.json e package-lock.json
+# Copy only package.json and package-lock.json
 COPY package*.json ./
 
+# Instala dependências de forma determinística
 # Install dependencies deterministically (faster & reproducible)
-# Instala dependências de forma determinística (mais rápido e reproduzível)
 RUN npm ci
 
-# Copy the rest of the application code
-# Copia o restante do código da aplicação
+# Copia o restante do código da aplicação (exceto o que está no .dockerignore)
+# Copy the rest of the application code (except what's in .dockerignore)
 COPY . .
 
-# ============================
-# STAGE 2 — Runtime
-# Etapa 2 — Execução
-# ============================
+# ---------------------------------------------------------
+# 2) Runtime Stage - Imagem final e leve
+#    Runtime Stage - Final lightweight image
+# ---------------------------------------------------------
 FROM node:20-alpine
 
+# Define o diretório de trabalho
+# Set working directory
 WORKDIR /app
 
-# Create a non-root user for security
-# Cria um usuário não-root para segurança
+# Cria usuário não-root para segurança
+# Create non-root user for security
 RUN addgroup -S nodegroup && adduser -S nodeuser -G nodegroup
 
-# Copy only the built application from the previous stage
-# Copia apenas a aplicação construída no estágio anterior
+# Copia apenas o necessário da imagem de build
+# Copy only necessary files from build stage
 COPY --from=build /app /app
 
-# Remove development dependencies to reduce image size
-# Remove dependências de desenvolvimento para reduzir o tamanho da imagem
-RUN npm prune --production
-
-# Adjust permissions so the non-root user can access the app
-# Ajusta permissões para que o usuário não-root possa acessar a aplicação
-RUN chown -R nodeuser:nodegroup /app
-
-# Switch to the non-root user
-# Troca para o usuário não-root
+# Usa usuário seguro
+# Use secure non-root user
 USER nodeuser
 
-# Expose the application port
-# Expõe a porta da aplicação
-EXPOSE 3000
+# Expõe a porta da API
+# Expose API port
+EXPOSE 8080
 
-# Healthcheck to ensure the container is healthy
-# Healthcheck para garantir que o container está saudável
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
-  CMD wget
+# Comando final para iniciar a aplicação
+# Final command to start the application
+CMD ["npm", "start"]

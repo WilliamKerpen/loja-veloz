@@ -10,3 +10,5 @@ k8s
 public
 .env
 .env.example
+../public/
+public/
