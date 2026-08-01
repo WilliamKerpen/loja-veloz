@@ -1,3 +1,5 @@
+# Ignore unnecessary files
+# Ignora arquivos desnecessários
 node_modules
 npm-debug.log
 .git
@@ -5,10 +7,7 @@ npm-debug.log
 Dockerfile
 docker-compose.yml
 tests
-db
 k8s
-public
+public/img
 .env
 .env.example
-../public/
-public/

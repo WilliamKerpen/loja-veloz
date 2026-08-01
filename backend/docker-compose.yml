@@ -16,8 +16,8 @@ services:
       NODE_ENV: development
     networks:
       - loja_veloz_net
-    # Healthcheck — garante que a API está saudável
     # Healthcheck — ensures API is healthy
+    # Healthcheck — garante que a API está saudável
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
       interval: 30s
@@ -40,21 +40,21 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - loja_veloz_net
-    # Healthcheck — garante que o banco está aceitando conexões
     # Healthcheck — ensures DB is accepting connections
+    # Healthcheck — garante que o banco está aceitando conexões
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-# Volume persistente para o banco
 # Persistent volume for the database
+# Volume persistente para o banco
 volumes:
   postgres_data:
 
-# Rede interna entre API e DB
 # Internal network between API and DB
+# Rede interna entre API e DB
 networks:
   loja_veloz_net:
     driver: bridge

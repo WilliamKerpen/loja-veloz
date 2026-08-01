@@ -1,80 +1,68 @@
-name: CI/CD - Loja Veloz
+deploy:
+  needs: build-test-publish
+  runs-on: ubuntu-latest
 
-on:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
+  steps:
+    - name: Deploy via SSH with rollback
+      # Faz deploy via SSH com rollback automático
+      # Deploy via SSH with automatic rollback
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}        # Host da VM / VM host
+        username: ${{ secrets.SSH_USER }}    # Usuário SSH / SSH user
+        key: ${{ secrets.SSH_KEY }}          # Chave privada / Private key
 
-jobs:
-  build-test-publish:
-    runs-on: ubuntu-latest
+        script: |
+          # Pull da nova imagem / Pull new image
+          docker pull ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:${{ github.sha }}
 
-    steps:
-      # Checkout do repositório
-      # Checkout repository
-      - name: Checkout repository
-        uses: actions/checkout@v4
+          # Guarda a imagem atual (latest) para rollback
+          # Save current production image (latest) for rollback
+          CURRENT_IMAGE=${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:latest
 
-      # Configura Node.js
-      # Set up Node.js
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
+          # Para e remove apenas a API (nunca o banco)
+          # Stop and remove only the API container (never the database)
+          docker stop loja-veloz-api || true
+          docker rm loja-veloz-api || true
 
-      # Instala dependências do backend
-      # Install backend dependencies
-      - name: Install dependencies
-        run: cd backend && npm install
+          # Sobe a nova versão com rede e .env
+          # Start new version with network and .env
+          docker run -d --name loja-veloz-api \
+            --env-file .env \
+            --network loja_veloz_net \
+            -p 3000:3000 \
+            ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:${{ github.sha }}
 
-      # Executa testes
-      # Run tests
-      - name: Run tests
-        working-directory: backend
-        run: npm test
-        env:
-          NODE_ENV: test
+          # Aguarda API iniciar / Wait API to start
+          sleep 5
 
-      # Configura Docker Buildx para multi-arch
-      # Set up Docker Buildx (multi-arch)
-      - name: Set up Docker Buildx (multi-arch)
-        run: docker buildx create --use --driver docker-container
+          # Teste de saúde / Health check
+          if curl -f http://localhost:3000/health; then
+            echo "Deploy OK - Nova versão está funcionando"
+            echo "Deploy OK - New version is working"
+          else
+            echo "Deploy FALHOU - Iniciando rollback..."
+            echo "Deploy FAILED - Starting rollback..."
 
-      # Login no Docker Hub
-      # Login to Docker Hub
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      # Build multi-arch usando SOMENTE a pasta backend
-      # Multi-arch build using ONLY the backend folder
-      - name: Build and push multi-arch image
-        run: |
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --file backend/Dockerfile \
-            -t ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:${{ github.sha }} \
-            -t ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:latest \
-            --push backend
-
-  deploy:
-    needs: build-test-publish
-    runs-on: ubuntu-latest
-
-    steps:
-      # Deploy via SSH
-      # Deploy via SSH
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            docker pull --platform linux/arm64 ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:${{ github.sha }}
+            # Remove versão quebrada / Remove broken version
             docker stop loja-veloz-api || true
             docker rm loja-veloz-api || true
-            docker run --platform linux/arm64 -d --name loja-veloz-api -p 3000:3000 ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:${{ github.sha }}
+
+            # Sobe versão anterior / Start previous version
+            docker run -d --name loja-veloz-api \
+              --env-file .env \
+              --network loja_veloz_net \
+              -p 3000:3000 \
+              $CURRENT_IMAGE
+
+            # Testa novamente / Test again
+            if curl -f http://localhost:3000/health; then
+              echo "Rollback OK - Versão anterior restaurada"
+              echo "Rollback OK - Previous version restored"
+            else
+              echo "Rollback FALHOU - Verificar manualmente"
+              echo "Rollback FAILED - Manual intervention required"
+            fi
+
+            exit 1
+          fi
