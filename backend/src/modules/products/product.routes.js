@@ -14,9 +14,9 @@ const router = express.Router();
 // ============================================================
 //
 // Durante os testes (NODE_ENV = "test"), o banco não está ativo.
-// Para evitar erro 500, retornamos uma resposta simulada.
+// Para evitar erro 500, retornar uma resposta simulada.
 // During tests (NODE_ENV = "test"), the database is not active.
-// To avoid a 500 error, we return a simulated response.
+// To avoid a 500 error, return a simulated response.
 //
 router.get("/", async (req, res) => {
   if (process.env.NODE_ENV === "test") {
