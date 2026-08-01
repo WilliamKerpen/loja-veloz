@@ -1,68 +1,122 @@
-deploy:
-  needs: build-test-publish
-  runs-on: ubuntu-latest
+name: CI/CD - Loja Veloz
 
-  steps:
-    - name: Deploy via SSH with rollback
-      # Faz deploy via SSH com rollback automático
-      # Deploy via SSH with automatic rollback
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.SSH_HOST }}        # Host da VM / VM host
-        username: ${{ secrets.SSH_USER }}    # Usuário SSH / SSH user
-        key: ${{ secrets.SSH_KEY }}          # Chave privada / Private key
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
-        script: |
-          # Pull da nova imagem / Pull new image
-          docker pull ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:${{ github.sha }}
+jobs:
+  build-test-publish:
+    runs-on: ubuntu-latest
 
-          # Guarda a imagem atual (latest) para rollback
-          # Save current production image (latest) for rollback
-          CURRENT_IMAGE=${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:latest
+    steps:
+      - name: Checkout repository
+        # Faz checkout do repositório
+        # Checkout repository
+        uses: actions/checkout@v4
 
-          # Para e remove apenas a API (nunca o banco)
-          # Stop and remove only the API container (never the database)
-          docker stop loja-veloz-api || true
-          docker rm loja-veloz-api || true
+      - name: Set up Node.js
+        # Configura Node.js
+        # Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
-          # Sobe a nova versão com rede e .env
-          # Start new version with network and .env
-          docker run -d --name loja-veloz-api \
-            --env-file .env \
-            --network loja_veloz_net \
-            -p 3000:3000 \
-            ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:${{ github.sha }}
+      - name: Install dependencies
+        # Instala dependências do backend
+        # Install backend dependencies
+        run: cd backend && npm install
 
-          # Aguarda API iniciar / Wait API to start
-          sleep 5
+      - name: Run tests
+        # Executa testes
+        # Run tests
+        working-directory: backend
+        run: npm test
+        env:
+          NODE_ENV: test
 
-          # Teste de saúde / Health check
-          if curl -f http://localhost:3000/health; then
-            echo "Deploy OK - Nova versão está funcionando"
-            echo "Deploy OK - New version is working"
-          else
-            echo "Deploy FALHOU - Iniciando rollback..."
-            echo "Deploy FAILED - Starting rollback..."
+      - name: Login to Docker Hub
+        # Faz login no Docker Hub
+        # Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-            # Remove versão quebrada / Remove broken version
+      - name: Build and push image
+        # Faz build e push da imagem
+        # Build and push Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:${{ github.sha }} -t ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:latest backend
+          docker push ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:${{ github.sha }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:latest
+
+  deploy:
+    needs: build-test-publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH with rollback
+        # Faz deploy via SSH com rollback automático
+        # Deploy via SSH with automatic rollback
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}        # Host da VM / VM host
+          username: ${{ secrets.SSH_USER }}    # Usuário SSH / SSH user
+          key: ${{ secrets.SSH_KEY }}          # Chave privada / Private key
+
+          script: |
+            # Pull da nova imagem / Pull new image
+            docker pull ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:${{ github.sha }}
+
+            # Guarda a imagem atual (latest) para rollback
+            # Save current production image (latest) for rollback
+            CURRENT_IMAGE=${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:latest
+
+            # Para e remove apenas a API (nunca o banco)
+            # Stop and remove only the API container (never the database)
             docker stop loja-veloz-api || true
             docker rm loja-veloz-api || true
 
-            # Sobe versão anterior / Start previous version
+            # Sobe a nova versão com rede e .env
+            # Start new version with network and .env
             docker run -d --name loja-veloz-api \
               --env-file .env \
               --network loja_veloz_net \
               -p 3000:3000 \
-              $CURRENT_IMAGE
+              ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:${{ github.sha }}
 
-            # Testa novamente / Test again
+            # Aguarda API iniciar / Wait API to start
+            sleep 5
+
+            # Teste de saúde / Health check
             if curl -f http://localhost:3000/health; then
-              echo "Rollback OK - Versão anterior restaurada"
-              echo "Rollback OK - Previous version restored"
+              echo "Deploy OK - Nova versão está funcionando"
+              echo "Deploy OK - New version is working"
             else
-              echo "Rollback FALHOU - Verificar manualmente"
-              echo "Rollback FAILED - Manual intervention required"
-            fi
+              echo "Deploy FALHOU - Iniciando rollback..."
+              echo "Deploy FAILED - Starting rollback..."
 
-            exit 1
-          fi
+              # Remove versão quebrada / Remove broken version
+              docker stop loja-veloz-api || true
+              docker rm loja-veloz-api || true
+
+              # Sobe versão anterior / Start previous version
+              docker run -d --name loja-veloz-api \
+                --env-file .env \
+                --network loja_veloz_net \
+                -p 3000:3000 \
+                $CURRENT_IMAGE
+
+              # Testa novamente / Test again
+              if curl -f http://localhost:3000/health; then
+                echo "Rollback OK - Versão anterior restaurada"
+                echo "Rollback OK - Previous version restored"
+              else
+                echo "Rollback FALHOU - Verificar manualmente"
+                echo "Rollback FAILED - Manual intervention required"
+              fi
+
+              exit 1
+            fi
