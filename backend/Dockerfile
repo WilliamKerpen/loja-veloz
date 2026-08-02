@@ -2,7 +2,7 @@
 # 1) Build Stage - Install dependencies
 #    1) Etapa de build - Instala dependências
 # ---------------------------------------------------------
-FROM node:20-slim AS build
+FROM node:20-alpine AS build
 
 # Set working directory
 # Define o diretório de trabalho
@@ -24,15 +24,15 @@ COPY . .
 # 2) Runtime Stage - Lightweight final image
 #    2) Etapa de execução - Imagem final e leve
 # ---------------------------------------------------------
-FROM node:20-slim
+FROM node:20-alpine
 
 # Set working directory
 # Define o diretório de trabalho
 WORKDIR /app
 
-# Create non-root user for security
-# Cria usuário não-root para segurança
-RUN groupadd -r nodegroup && useradd -r -g nodegroup nodeuser
+# Create non-root user for security (Alpine version)
+# Cria usuário não-root para segurança (versão Alpine)
+RUN addgroup -S nodegroup && adduser -S nodeuser -G nodegroup
 
 # Copy only necessary files from build stage
 # Copia apenas o necessário da etapa de build

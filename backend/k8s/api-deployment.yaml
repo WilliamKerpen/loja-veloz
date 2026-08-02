@@ -38,6 +38,9 @@ spec:
                 secretKeyRef:
                   name: loja-veloz-secret
                   key: DATABASE_URL
+             # Força Kubernetes a sobrescrever o .env
+            - name: OVERRIDE_ENV
+              value: "true"
 
             # Variáveis do PostgreSQL (driver pg)
             - name: POSTGRES_HOST
