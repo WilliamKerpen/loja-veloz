@@ -29,9 +29,15 @@ jobs:
         # Install backend dependencies
         run: cd backend && npm install
 
+      - name: Run lint
+        # Verifica qualidade do código com ESLint
+        # Run ESLint to check code quality
+        working-directory: backend
+        run: npm run lint
+
       - name: Run tests
-        # Executa testes
-        # Run tests
+        # Executa testes automatizados
+        # Run automated tests
         working-directory: backend
         run: npm test
         env:
@@ -46,7 +52,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push image
-        # Faz build e push da imagem
+        # Faz build e push da imagem Docker
         # Build and push Docker image
         run: |
           docker build \
@@ -73,6 +79,7 @@ jobs:
 
           script: |
             echo "=== CI/CD Loja Veloz - Deploy iniciado ==="
+            echo "=== CI/CD Loja Veloz - Deploy started ==="
 
             # Garante que a rede existe
             # Ensure Docker network exists

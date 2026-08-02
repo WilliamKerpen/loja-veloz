@@ -7,7 +7,8 @@
     "start": "node src/server.js",
     "test": "node --test",
     "migrate": "node src/db/migrate.js",
-    "seed": "node src/seed/seed-data.js"
+    "seed": "node src/seed/seed-data.js",
+    "lint": "eslint . --ext .js"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +26,8 @@
     "stripe": "^22.3.2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
     "jest": "^30.4.2",
     "supertest": "^7.2.2",
     "tap": "^21.7.5"
