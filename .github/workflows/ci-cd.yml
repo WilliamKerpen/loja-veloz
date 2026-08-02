@@ -48,11 +48,15 @@ jobs:
         # Faz build e push da imagem
         # Build and push Docker image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:${{ github.sha }} -t ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:latest backend
+          docker build \
+            -t ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:${{ github.sha }} \
+            -t ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:latest \
+            ./backend
+
           docker push ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:${{ github.sha }}
           docker push ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:latest
 
-  deploy:
+    deploy:
     needs: build-test-publish
     runs-on: ubuntu-latest
 
@@ -67,56 +71,81 @@ jobs:
           key: ${{ secrets.SSH_KEY }}          # Chave privada / Private key
 
           script: |
-            # Pull da nova imagem / Pull new image
+            echo "=== CI/CD Loja Veloz - Deploy iniciado ==="
+
+            # Garante que a rede existe
+            # Ensure Docker network exists
+            docker network create loja_veloz_net || true
+
+            # AUTO-CONNECT: garante que o Postgres está na rede
+            # AUTO-CONNECT: ensure PostgreSQL is attached to the network
+            docker network connect loja_veloz_net loja_veloz_dt || true
+
+            # Pull da nova imagem
+            # Pull new image
             docker pull ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:${{ github.sha }}
 
-            # Guarda a imagem atual (latest) para rollback
-            # Save current production image (latest) for rollback
-            CURRENT_IMAGE=${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:latest
+            # Salva imagem atual para rollback
+            # Save current production image for rollback
+            docker tag \
+              ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:latest \
+              ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:previous || true
 
-            # Para e remove apenas a API (nunca o banco)
-            # Stop and remove only the API container (never the database)
-            docker stop loja-veloz-api || true
-            docker rm loja-veloz-api || true
+            # Remove API atual
+            # Remove current API container
+            docker rm -f loja-veloz-api || true
 
-            # Sobe a nova versão com rede e .env
-            # Start new version with network and .env
+            # Sobe nova versão
+            # Start new version
             docker run -d --name loja-veloz-api \
-              --env-file .env \
+              --env-file /home/ubuntu/.env \
               --network loja_veloz_net \
               -p 3000:3000 \
               ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:${{ github.sha }}
 
-            # Aguarda API iniciar / Wait API to start
-            sleep 5
+            echo "Aguardando API iniciar..."
+            echo "Waiting for API to start..."
 
-            # Teste de saúde / Health check
-            if curl -f http://localhost:3000/health; then
-              echo "Deploy OK - Nova versão está funcionando"
-              echo "Deploy OK - New version is working"
-            else
-              echo "Deploy FALHOU - Iniciando rollback..."
-              echo "Deploy FAILED - Starting rollback..."
-
-              # Remove versão quebrada / Remove broken version
-              docker stop loja-veloz-api || true
-              docker rm loja-veloz-api || true
-
-              # Sobe versão anterior / Start previous version
-              docker run -d --name loja-veloz-api \
-                --env-file .env \
-                --network loja_veloz_net \
-                -p 3000:3000 \
-                $CURRENT_IMAGE
-
-              # Testa novamente / Test again
+            # Healthcheck com retry
+            # Healthcheck with retry
+            SUCCESS=false
+            for i in {1..10}; do
               if curl -f http://localhost:3000/health; then
-                echo "Rollback OK - Versão anterior restaurada"
-                echo "Rollback OK - Previous version restored"
-              else
-                echo "Rollback FALHOU - Verificar manualmente"
-                echo "Rollback FAILED - Manual intervention required"
+                SUCCESS=true
+                break
               fi
+              sleep 3
+            done
 
-              exit 1
+            if [ "$SUCCESS" = true ]; then
+              echo "Deploy OK - Nova versão funcionando"
+              echo "Deploy OK - New version is working"
+              exit 0
             fi
+
+            echo "Deploy FALHOU - Iniciando rollback..."
+            echo "Deploy FAILED - Starting rollback..."
+
+            # Remove versão quebrada
+            # Remove broken version
+            docker rm -f loja-veloz-api || true
+
+            # Sobe versão anterior
+            # Start previous version
+            docker run -d --name loja-veloz-api \
+              --env-file /home/ubuntu/.env \
+              --network loja_veloz_net \
+              -p 3000:3000 \
+              ${{ secrets.DOCKER_USERNAME }}/loja-veloz-api:previous
+
+            # Testa rollback
+            # Test rollback
+            if curl -f http://localhost:3000/health; then
+              echo "Rollback OK - Versão anterior restaurada"
+              echo "Rollback OK - Previous version restored"
+            else
+              echo "Rollback FALHOU - Intervenção manual necessária"
+              echo "Rollback FAILED - Manual intervention required"
+            fi
+
+            exit 1

@@ -15,6 +15,7 @@
 - Kubernetes Deployment
 - Observability
 - Project Structure
+- Docker Images vs Docker Compose (API + PostgreSQL)
 
 ---
 
@@ -231,6 +232,82 @@ backend/
 └── README.md
 
 ---
+## Docker Images vs Docker Compose (API + PostgreSQL)
+
+In this project, the API and the PostgreSQL database are separate services, each with its own Docker image. This separation follows best practices for containerized architectures.
+
+API Image (published to Docker Hub)
+
+The API is built from the project's Dockerfile and published to Docker Hub:
+
+wkerpen/loja-veloz-api:latest
+
+This image contains:
+
+Node.js runtime
+
+Application source code
+
+Dependencies
+
+Migrations and seeds scripts
+
+PostgreSQL Image (NOT published to Docker Hub)
+
+The database is not part of the API image. Instead, Docker Compose pulls the official PostgreSQL image:
+
+postgres:15-alpine
+
+This image is maintained by the PostgreSQL team and is not built or published by this project.
+
+Why the database is not inside the API image
+
+Containers follow the single responsibility principle.
+
+The API and the database must be independent services.
+
+Each service can be updated, scaled, or replaced individually.
+
+Production environments (Kubernetes) require separate resources:
+
+Deployment for API
+
+StatefulSet for PostgreSQL
+
+What Docker Compose actually does
+
+When running:
+
+docker compose up --build
+
+Docker Compose:
+
+Builds the API image locally (or pulls it from Docker Hub)
+
+Pulls the official PostgreSQL image
+
+Creates the internal network (loja_veloz_net)
+
+Creates the persistent volume (postgres_data)
+
+Starts both containers
+
+Ensures the API waits for the database (depends_on)
+
+Injects environment variables from .env
+
+Important Clarification
+
+Running:
+
+docker pull wkerpen/loja-veloz-api
+
+only pulls the API image. It does not pull PostgreSQL, because the database is defined as a separate service in docker-compose.yml.
+
+To bring both services up together, you must use:
+
+docker compose up
+---
 
 # Português - PT-BR
 
@@ -244,6 +321,7 @@ backend/
 - Implantação no Kubernetes
 - Observabilidade
 - Estrutura do projeto
+- Imagens Docker vs. Docker Compose (API + PostgreSQL)
 
 ---
 
@@ -377,3 +455,81 @@ backend/
 ├── k8s/
 ├── .env.example
 └── README.md
+
+---
+
+## Imagens Docker vs. Docker Compose (API + PostgreSQL)
+
+Neste projeto, a API e o banco de dados PostgreSQL são serviços separados, cada um com sua própria imagem Docker. Essa separação segue as melhores práticas para arquiteturas conteinerizadas.
+
+Imagem da API (publicada no Docker Hub)
+
+A API é construída a partir do Dockerfile do projeto e publicada no Docker Hub:
+
+wkerpen/loja-veloz-api:latest
+
+Esta imagem contém:
+
+Runtime do Node.js
+
+Código-fonte da aplicação
+
+Dependências
+
+Scripts de migração e *seeds*
+
+Imagem do PostgreSQL (NÃO publicada no Docker Hub)
+
+O banco de dados não faz parte da imagem da API. Em vez disso, o Docker Compose baixa a imagem oficial do PostgreSQL:
+
+postgres:15-alpine
+
+Essa imagem é mantida pela equipe do PostgreSQL e não é construída nem publicada por este projeto.
+
+Por que o banco de dados não está dentro da imagem da API
+
+Containers seguem o princípio de responsabilidade única.
+
+A API e o banco de dados devem ser serviços independentes.
+
+Cada serviço pode ser atualizado, escalado ou substituído individualmente.
+
+Ambientes de produção (Kubernetes) exigem recursos separados:
+
+Deployment para a API
+
+StatefulSet para o PostgreSQL
+
+O que o Docker Compose realmente faz
+
+Ao executar:
+
+docker compose up --build
+
+O Docker Compose:
+
+Constrói a imagem da API localmente (ou a baixa do Docker Hub)
+
+Baixa a imagem oficial do PostgreSQL
+
+Cria a rede interna (loja_veloz_net)
+
+Cria o volume persistente (postgres_data)
+
+Inicia ambos os containers
+
+Garante que a API aguarde o banco de dados (depends_on)
+
+Injeta variáveis ​​de ambiente a partir do arquivo .env
+
+Esclarecimento importante
+
+Executar:
+
+docker pull wkerpen/loja-veloz-api
+
+baixa apenas a imagem da API. Isso não baixa o PostgreSQL, pois o banco de dados está definido como um serviço separado no arquivo docker-compose.yml.
+
+Para iniciar ambos os serviços juntos, você deve usar:
+
+docker compose up
